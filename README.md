@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="echoleak_banner_animated.svg" width="100%" alt="HarborLight"/>
+</p>
+
 # Operation ECHOLEAK: Hunting an Indirect Prompt Injection in Microsoft 365 Copilot
 
 **Author:** Jenna Frank · **Hunt:** 26, Log(n) Pacific cyber range · **Report:** Edition 4.3, TLP:CLEAR · **Platform:** Microsoft Sentinel (KQL)
