@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" viewBox="0 0 1280 340">
+<defs>
+      <linearGradient id="hbg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0b1322"/><stop offset="1" stop-color="#070a11"/></linearGradient>
+      <linearGradient id="evid" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#2ea043"/><stop offset="0.5" stop-color="#d9a521"/><stop offset="1" stop-color="#e5484d"/></linearGradient>
+      <radialGradient id="hglow" cx="0.5" cy="0.45" r="0.55">
+        <stop offset="0" stop-color="#34d3e6" stop-opacity="0.18"/><stop offset="1" stop-color="#34d3e6" stop-opacity="0"/></radialGradient>
+    </defs>
+<rect x="0" y="0" width="1280" height="340" rx="18" fill="url(#hbg)"/>
+<ellipse cx="620" cy="150" rx="560" ry="170" fill="url(#hglow)"/>
+<rect x="3" y="3" width="1274" height="334" rx="16" fill="none" stroke="#22d3ee" stroke-opacity="0.30" stroke-width="1.5"/>
+<rect x="0" y="0" width="1280" height="6" rx="3" fill="url(#evid)"/>
+<rect x="0" y="0" width="200" height="6" fill="#ffffff" fill-opacity="0.35">
+      <animateTransform attributeName="transform" type="translate" from="-220 0" to="1280 0" dur="3.2s" repeatCount="indefinite"/></rect>
+<text x="70" y="92" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="12" letter-spacing="2.5" fill="#34d3e6" fill-opacity="0.9">COPILOT READS</text>
+<rect x="70" y="104" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="0.00s" repeatCount="indefinite"/></rect>
+<rect x="110" y="104" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="0.26s" repeatCount="indefinite"/></rect>
+<rect x="150" y="104" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="0.52s" repeatCount="indefinite"/></rect>
+<rect x="190" y="104" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="0.78s" repeatCount="indefinite"/></rect>
+<rect x="230" y="104" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="1.04s" repeatCount="indefinite"/></rect>
+<rect x="70" y="144" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="1.30s" repeatCount="indefinite"/></rect>
+<rect x="110" y="144" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="1.56s" repeatCount="indefinite"/></rect>
+<rect x="150" y="144" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="1.82s" repeatCount="indefinite"/></rect>
+<rect x="190" y="144" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="2.08s" repeatCount="indefinite"/></rect>
+<rect x="230" y="144" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="2.34s" repeatCount="indefinite"/></rect>
+<rect x="70" y="184" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="2.60s" repeatCount="indefinite"/></rect>
+<rect x="110" y="184" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="2.86s" repeatCount="indefinite"/></rect>
+<rect x="150" y="184" width="30" height="30" rx="5" fill="#34d3e6" fill-opacity="0.15"><animate attributeName="fill-opacity" values="0.15;0.15;1;0.4;0.15" keyTimes="0;0.30;0.45;0.6;1" dur="4.2s" begin="3.12s" repeatCount="indefinite"/></rect>
+<rect x="190" y="184" width="30" height="30" rx="5" fill="#15212b"/>
+<rect x="230" y="184" width="30" height="30" rx="5" fill="#15212b"/>
+<text x="70" y="238" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="12" letter-spacing="1.5" fill="#7f97a4">→ 13 FILES, 2s CADENCE</text>
+<text x="605" y="168" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="82" font-weight="700" letter-spacing="18" fill="#34d3e6">ECHOLEAK</text>
+<rect x="892" y="128" width="17" height="48" fill="#34d3e6">
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.5;0.5;1" dur="1.1s" repeatCount="indefinite"/></rect>
+<text x="605" y="206" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="15.5" letter-spacing="4" fill="#5ea9bd">M365 COPILOT INDIRECT PROMPT INJECTION  ·  THREAT HUNT</text>
+<line x1="385" y1="258" x2="905" y2="258" stroke="#1d2a36" stroke-width="2"/>
+<circle cx="385.0" cy="258" r="6" fill="#2ea043"/>
+<circle cx="385.0" cy="258" r="6" fill="none" stroke="#2ea043" stroke-opacity="0.35" stroke-width="2"/>
+<text x="385.0" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">LURE</text>
+<circle cx="471.7" cy="258" r="6" fill="#2ea043"/>
+<circle cx="471.7" cy="258" r="6" fill="none" stroke="#2ea043" stroke-opacity="0.35" stroke-width="2"/>
+<text x="471.7" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">OPEN</text>
+<circle cx="558.3" cy="258" r="6" fill="#2ea043"/>
+<circle cx="558.3" cy="258" r="6" fill="none" stroke="#2ea043" stroke-opacity="0.35" stroke-width="2"/>
+<text x="558.3" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">PROMPT</text>
+<circle cx="645.0" cy="258" r="6" fill="#d9a521"/>
+<circle cx="645.0" cy="258" r="6" fill="none" stroke="#d9a521" stroke-opacity="0.35" stroke-width="2"/>
+<text x="645.0" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">INJECT</text>
+<circle cx="731.7" cy="258" r="6" fill="#2ea043"/>
+<circle cx="731.7" cy="258" r="6" fill="none" stroke="#2ea043" stroke-opacity="0.35" stroke-width="2"/>
+<text x="731.7" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">COLLECT</text>
+<circle cx="818.3" cy="258" r="6" fill="#2ea043"/>
+<circle cx="818.3" cy="258" r="6" fill="none" stroke="#2ea043" stroke-opacity="0.35" stroke-width="2"/>
+<text x="818.3" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">STAGE</text>
+<circle cx="905.0" cy="258" r="6" fill="#e5484d"/>
+<circle cx="905.0" cy="258" r="6" fill="none" stroke="#e5484d" stroke-opacity="0.35" stroke-width="2"/>
+<text x="905.0" y="280" text-anchor="middle" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="10" letter-spacing="1" fill="#7f97a4">DELIVERY</text>
+<circle cx="385" cy="258" r="7" fill="#34d3e6" fill-opacity="0.9">
+      <animate attributeName="cx" values="385;905" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="fill-opacity" values="0;0.9;0.9;0" keyTimes="0;0.1;0.9;1" dur="4s" repeatCount="indefinite"/></circle>
+<text x="1245" y="98" text-anchor="end" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="16" font-weight="700" letter-spacing="1" fill="#34d3e6">94 / 100  EXCEPTIONAL</text>
+<circle cx="1257" cy="94" r="4" fill="#34d3e6"/>
+<text x="1245" y="132" text-anchor="end" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="14" font-weight="400" letter-spacing="1" fill="#7f97a4">HUNT 26</text>
+<text x="1245" y="160" text-anchor="end" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="14" font-weight="400" letter-spacing="1" fill="#5ea9bd">13 FILES READ</text>
+<circle cx="1257" cy="156" r="4" fill="#34d3e6"/>
+<text x="1245" y="188" text-anchor="end" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="14" font-weight="400" letter-spacing="1" fill="#5ea9bd">10 KQL DETECTIONS</text>
+<circle cx="1257" cy="184" r="4" fill="#34d3e6"/>
+<text x="1245" y="216" text-anchor="end" font-family="ui-monospace, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="14" font-weight="400" letter-spacing="1" fill="#e5484d">DELIVERY NOT PROVEN</text>
+<circle cx="1257" cy="212" r="4" fill="#e5484d"/>
+</svg>
