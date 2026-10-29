@@ -1,0 +1,294 @@
+# =====================================================================
+# Operation ECHOLEAK  -  Microsoft Sentinel scheduled analytics rules
+# Hunt ID: el--17-20260920   Author: Jenna Frank   Report version: 3.3
+#
+# The eight validated detections (D1, D2, D3, D4, D5, D6, D8, D9) as
+# import-ready Sentinel scheduled analytics rules. Queries are the
+# production forms (no hunt RunId / time pin). D7 is NOT exported: it is
+# Proposed until its combined, document-matched, time-bounded correlation
+# is implemented and tested.
+#
+# BEFORE ENABLING: run each rule in audit/silent mode for a week against
+# real traffic to establish the production false-positive rate, then set
+# the allow-lists named in the deployment runbook (report section 13).
+# Thresholds here fire on any returned row (triggerOperator gt, threshold 0);
+# the detection logic lives in the query.
+# =====================================================================
+
+- id: 8f714602-9bf5-4d3c-82ec-fc4854688daa
+  name: "ECHOLEAK D1 - Copilot reads many distinct files in a short window"
+  description: "A Copilot session reads 5 or more distinct files within a 5-minute window. Volume-keyed collection signal; to exfiltrate files an agent must first read them."
+  severity: Medium
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 5m
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Collection
+  relevantTechniques:
+    - T1213.002
+  query: |
+    CopilotAudit_CL
+    | where ToolName == "Graph.ReadFile"
+    | extend FileId = tostring(parse_json(ToolParameters).fileId)
+    | summarize DistinctFiles = dcount(FileId), First = min(TimeGenerated), Last = max(TimeGenerated)
+        by UserId, SessionId, Window = bin(TimeGenerated, 5m)
+    | where DistinctFiles >= 5
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: fa23ebe7-0018-48b1-9834-3f1f3a53db95
+  name: "ECHOLEAK D2 - Copilot reply links to a host outside the tenant"
+  description: "A Copilot response contains a link to a host that is not the exact tenant SharePoint host. Exact allow-list match, not a suffix (a suffix would pass look-alike domains)."
+  severity: High
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 5m
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Exfiltration
+  relevantTechniques:
+    - T1567
+  query: |
+    let allowed = dynamic(["cormorantcapital.sharepoint.com"]);
+    CopilotAudit_CL
+    | where InteractionType == "Response"
+    | extend Url = extract_all(@"\((https?://[^)\s]+)\)", CopilotResponse)
+    | mv-expand Url to typeof(string)
+    | extend Host = tolower(tostring(parse_url(Url).Host))
+    | where isnotempty(Host) and Host !in (allowed)
+    | summarize Urls = count(), Hosts = make_set(Host) by UserId, SessionId, TimeGenerated
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+    - entityType: URL
+      fieldMappings:
+        - identifier: Url
+          columnName: Hosts
+  version: 1.0.0
+  kind: Scheduled
+
+- id: aab67bef-556a-4264-9645-d0971df5c4df
+  name: "ECHOLEAK D3 - Copilot sensitive-keyword searches with no matching prompt"
+  description: "Copilot searches for sensitive keywords in a session whose user prompt never contained those terms. The leftanti join removes sessions where the human actually asked."
+  severity: Medium
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 1h
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Discovery
+  relevantTechniques:
+    - T1083
+  query: |
+    CopilotAudit_CL
+    | where ToolName == "Graph.SearchFiles"
+    | extend Query = tostring(parse_json(ToolParameters).query)
+    | where Query has_any ("confidential","restricted","salary","acquisition","board")
+    | join kind=leftanti (CopilotAudit_CL | where InteractionType == "Prompt"
+        | where UserPrompt has_any ("confidential","restricted","salary","acquisition","board")) on SessionId
+    | summarize Searches = count(), Queries = make_set(Query) by UserId, SessionId
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: 6fcea024-7805-4a3b-91e7-b85992ab0b94
+  name: "ECHOLEAK D4 - Copilot configuration read or system prompt disclosed"
+  description: "Copilot reads its own configuration file or prints its system prompt back into a reply. The system prompt and guardrails are not meant to appear in output."
+  severity: High
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 5m
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Exfiltration
+  relevantTechniques:
+    - T1213.002
+  query: |
+    CopilotAudit_CL
+    | where (ToolName == "Graph.ReadFile" and ToolParameters has "Copilot System Configuration")
+        or (InteractionType == "Response" and CopilotResponse has "system_prompt")
+    | project TimeGenerated, UserId, SessionId, InteractionType, ToolName
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: 9106f8e5-f985-46e9-be65-6dd9924d4930
+  name: "ECHOLEAK D5 - Office file access with no matching Copilot read"
+  description: "Telemetry-integrity rule: a Copilot-using identity whose full-URL Office file accesses exceed the reads the Copilot audit stream recorded. Corroboration aid, not a primary alert. leftsemi scopes to identities that use Copilot, excluding service-account DLP scanners."
+  severity: Low
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 1h
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Collection
+  relevantTechniques:
+    - T1213.002
+  query: |
+    let CopilotReads = CopilotAudit_CL
+        | where ToolName == "Graph.ReadFile"
+        | extend FileId = tostring(parse_json(ToolParameters).fileId)
+        | summarize Reads = count() by UserId, FileId;
+    OfficeActivity_CL
+    | where Operation == "FileAccessed" and OfficeObjectId startswith "https://"
+    | summarize Accesses = count() by UserId, FileId = OfficeObjectId
+    | join kind=leftsemi (CopilotReads | distinct UserId) on UserId
+    | join kind=leftouter CopilotReads on UserId, FileId
+    | extend Reads = coalesce(Reads, 0)
+    | where Accesses != Reads
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: 4894196b-47d4-4398-be9b-48ea00cf3cad
+  name: "ECHOLEAK D6 - External document attachment then a Copilot read burst"
+  description: "Chains delivery to collection: an external Office attachment, then a Copilot read burst by the same user within four hours. Widen the window in production for longer dormancy."
+  severity: Medium
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 1h
+  queryPeriod: 8h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - InitialAccess
+    - Collection
+  relevantTechniques:
+    - T1566.001
+    - T1213.002
+  query: |
+    let Lure = OfficeActivity_CL
+        | where Operation == "MessageReceived" and SenderAddress !endswith "cormorantcapital.com"
+        | where isnotempty(AttachmentNames)
+        | project UserId, MailTime = TimeGenerated, AttachmentNames;
+    let Burst = CopilotAudit_CL
+        | where ToolName == "Graph.ReadFile"
+        | extend FileId = tostring(parse_json(ToolParameters).fileId)
+        | summarize DistinctFiles = dcount(FileId), BurstStart = min(TimeGenerated) by UserId, SessionId
+        | where DistinctFiles >= 5;
+    Lure | join kind=inner Burst on UserId
+    | where BurstStart between (MailTime .. MailTime + 4h)
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: 489cce9a-2bc5-4870-9e9f-3bbe47dc919d
+  name: "ECHOLEAK D8 - Copilot reply contains a long encoded token"
+  description: "A Copilot reply contains a 40-plus character encoded token. Host-independent complement to D2: catches the encoded payload even if the attacker moves to a new or allow-listed host. Pair with D2 to raise confidence."
+  severity: Medium
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 5m
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Exfiltration
+  relevantTechniques:
+    - T1567
+  query: |
+    CopilotAudit_CL
+    | where InteractionType == "Response"
+    | extend Len = strlen(CopilotResponse),
+        LongToken = isnotempty(extract(@"([A-Za-z0-9+/=_-]{40,})", 1, CopilotResponse))
+    | where LongToken
+    | project TimeGenerated, UserId, SessionId, Len
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+  version: 1.0.0
+  kind: Scheduled
+
+- id: 1a66c864-b835-4645-a111-f41983374d28
+  name: "ECHOLEAK D9 - Copilot reads a file outside the source declared before the read"
+  description: "Recommended Form C: time-aware file-name matching with a reason field. Alerts only on source_mismatch (a read outside a source declared before it). no_preceding_source reads are a separate review queue, not an alert, so missing telemetry is never reported as an attack. In production substitute the full path or fileId on both sides to separate identical names in different folders."
+  severity: High
+  status: Available
+  requiredDataConnectors: []
+  queryFrequency: 5m
+  queryPeriod: 1h
+  triggerOperator: gt
+  triggerThreshold: 0
+  suppressionEnabled: false
+  tactics:
+    - Execution
+    - Collection
+  relevantTechniques:
+    - T1213.002
+  query: |
+    let Declared = CopilotAudit_CL
+        | where InteractionType == "Prompt"
+        | where isnotempty(trim(@"\s", tostring(DataSourcesAccessed)))
+        | mv-expand Source = split(tostring(DataSourcesAccessed), ";") to typeof(string)
+        | extend Source = trim(@"\s", tostring(Source))
+        | where isnotempty(Source)
+        | extend parts = split(Source, "/")
+        | extend DeclaredName = tolower(tostring(parts[array_length(parts) - 1]))
+        | where isnotempty(DeclaredName)
+        | project TenantId, UserId, SessionId, SrcTime = TimeGenerated, DeclaredName;
+    CopilotAudit_CL
+    | where ToolName == "Graph.ReadFile"
+    | extend ReadName = tolower(tostring(parse_json(ToolParameters).fileName))
+    | project TenantId, UserId, SessionId, ReadTime = TimeGenerated, ReadName
+    | join kind=leftouter Declared on TenantId, UserId, SessionId
+    | summarize NamesBefore = make_set_if(DeclaredName, isnotnull(SrcTime) and SrcTime <= ReadTime)
+        by TenantId, UserId, SessionId, ReadTime, ReadName
+    | extend Reason = case(array_length(NamesBefore) == 0, "no_preceding_source",
+                           set_has_element(NamesBefore, ReadName), "declared",
+                           "source_mismatch")
+    | where Reason == "source_mismatch"
+    | project ReadTime, SessionId, ReadName, Reason, NamesBefore
+  entityMappings:
+    - entityType: Account
+      fieldMappings:
+        - identifier: FullName
+          columnName: UserId
+    - entityType: File
+      fieldMappings:
+        - identifier: Name
+          columnName: ReadName
+  version: 1.0.0
+  kind: Scheduled

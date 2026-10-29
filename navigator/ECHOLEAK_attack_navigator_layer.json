@@ -1,0 +1,112 @@
+{
+  "name": "Operation ECHOLEAK - M365 Copilot indirect prompt injection",
+  "versions": {
+    "attack": "20",
+    "navigator": "4.9.1",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Hunt el--17-20260920 (Cormorant Capital tenant). Techniques observed or inferred in the ECHOLEAK incident, each annotated with its evidence and the authored detection(s). SCORES ENCODE EVIDENCE CATEGORY, NOT DETECTION EFFECTIVENESS OR PERCENTAGE COVERAGE: 100 = Observed (recorded in telemetry), 50 = Inferred (staging recorded, delivery not established). ATLAS techniques (AML.T0051.001 Indirect Prompt Injection, AML.T0053 AI Agent Tool Invocation, AML.T0056 Extract LLM System Prompt, AML.T0077 LLM Response Rendering) are not in the enterprise-attack domain and are recorded in the report's ATT&CK/ATLAS table; this layer carries the ATT&CK for Enterprise mappings. Report v3.1, ATLAS 5.6.0, ATT&CK for Enterprise v20.0.",
+  "filters": {
+    "platforms": ["Office Suite", "SaaS", "Identity Provider"]
+  },
+  "sorting": 0,
+  "layout": {
+    "layout": "side",
+    "aggregateFunction": "average",
+    "showID": true,
+    "showName": true,
+    "showAggregateScores": false,
+    "countUnscored": false
+  },
+  "hideDisabled": false,
+  "techniques": [
+    {
+      "techniqueID": "T1566.001",
+      "tactic": "initial-access",
+      "score": 100,
+      "color": "#0ca30c",
+      "comment": "Observed: external .docx lure from globalfinancereview[.]net, 09:15:22; only external .docx that day (F1, K22). Detections: D6 (lure-to-burst), D7 (attachment-to-session, proposed).",
+      "enabled": true,
+      "metadata": [
+        {"name": "Status", "value": "Observed"},
+        {"name": "Detections", "value": "D6 (validated), D7 (proposed)"},
+        {"name": "Evidence", "value": "F1 / K22"}
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1204.002",
+      "tactic": "execution",
+      "score": 100,
+      "color": "#0ca30c",
+      "comment": "Observed (open); intent inferred. Document opened from OneDrive 10:42:08 (F2, K23). Detection: D7 (proposed).",
+      "enabled": true,
+      "metadata": [
+        {"name": "Status", "value": "Observed (open); intent inferred (High)"},
+        {"name": "Detections", "value": "D7 (proposed)"},
+        {"name": "Evidence", "value": "F2 / K23"}
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1083",
+      "tactic": "discovery",
+      "score": 100,
+      "color": "#0ca30c",
+      "comment": "Observed: sensitive-keyword file searches with no matching prompt (F6, K34). Detection: D3 (validated, 8 searches 1 session 0 elsewhere).",
+      "enabled": true,
+      "metadata": [
+        {"name": "Status", "value": "Observed"},
+        {"name": "Detections", "value": "D3 (validated)"},
+        {"name": "Evidence", "value": "F6 / K34"}
+      ]
+    },
+    {
+      "techniqueID": "T1213.002",
+      "tactic": "collection",
+      "score": 100,
+      "color": "#0ca30c",
+      "comment": "Observed: 13 repository reads outside the declared source (F4, F13, K27, K38). Wave one (5 reads) ran on an exact 2.000s cadence; wave two (8 reads) was irregular (1.1 to 8.1s). Detections: D1 (volume, validated), D9 (source mismatch, validated).",
+      "enabled": true,
+      "metadata": [
+        {"name": "Status", "value": "Observed"},
+        {"name": "Detections", "value": "D1 (validated), D9 (validated)"},
+        {"name": "Evidence", "value": "F4, F13 / K27, K38"}
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1567",
+      "tactic": "exfiltration",
+      "score": 50,
+      "color": "#eda100",
+      "comment": "Inferred: 13 beacon links staged to metrics-cdn.analyticshub.io; client fetch not proven, no egress telemetry (F7, K18, K25, G1). Detections: D2 (external host, validated), D8 (long token, validated).",
+      "enabled": true,
+      "metadata": [
+        {"name": "Status", "value": "Inferred (staging recorded; fetch not established)"},
+        {"name": "Detections", "value": "D2 (validated), D8 (validated)"},
+        {"name": "Evidence", "value": "F7 / K18, K25"}
+      ]
+    }
+  ],
+  "gradient": {
+    "colors": ["#eda100", "#0ca30c"],
+    "minValue": 50,
+    "maxValue": 100
+  },
+  "legendItems": [
+    {"label": "Observed (recorded in telemetry)", "color": "#0ca30c"},
+    {"label": "Inferred (staging recorded; delivery not established)", "color": "#eda100"}
+  ],
+  "metadata": [
+    {"name": "Hunt ID", "value": "el--17-20260920"},
+    {"name": "Validated detections", "value": "D1, D2, D3, D4, D5, D6, D8, D9"},
+    {"name": "Proposed detection", "value": "D7 (attachment-to-session correlation)"},
+    {"name": "Blocked detection", "value": "Exfil-confirmation rule (needs egress telemetry, G1)"}
+  ],
+  "showTacticRowBackground": true,
+  "tacticRowBackground": "#1a2636",
+  "selectTechniquesAcrossTactics": true,
+  "selectSubtechniquesWithParent": false
+}

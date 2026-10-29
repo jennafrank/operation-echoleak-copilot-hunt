@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+._*
+
+# Drafts and working files (not published)
+*.docx
+*draft*
+*debrief*
+*feedback*
+*grader*
+Screenshot*.png
+
+# Large media. .gitignore cannot filter by size; a local pre-commit
+# hook rejects any staged file over 25 MB.
+*.zip
+*.mp4
+*.mov

@@ -1,0 +1,274 @@
+// =====================================================================
+// Operation ECHOLEAK  -  companion detection and validation queries
+// Hunt ID: el--17-20260920   Author: Jenna Frank   Report version: 3.1
+// Target: Microsoft Sentinel (KQL), table CopilotAudit_CL (+ OfficeActivity_CL)
+//
+// HOW TO USE: this is a query LIBRARY, not one executable script. Run each
+// numbered section separately. Sections marked "replay" pin the hunt window
+// and RunId so they reproduce against this dataset; set the Logs time picker
+// to "Set in query".
+//
+// MOVING A RULE TO PRODUCTION is not just removing the hunt filters. A
+// production rule needs: a configured lookback matched to the detection
+// window, an analytics-rule schedule and frequency, entity mappings, and
+// environment-specific validation (a benign baseline, a tuned threshold,
+// and allow-lists for approved agents and hosts). The hunt scoping lines
+// are only the replay harness.
+//
+// D9 has three forms. Form C is recommended.
+//   Form A  session-aggregated, file name          - replayed on hunt data (B-56), 13 rows
+//   Form B  time-aware, file name                  - replayed on hunt data (B-63), 13 rows
+//   Form C  time-aware, FILE NAME, reason field    - recommended; validates its reason
+//                                                     labels synthetically (B-64)
+// Form C matches FILE NAMES, like A and B; its addition is the reason field
+// that classifies each read as no_preceding_source / declared / source_mismatch.
+// The identical-name-in-another-folder case is a documented LIMITATION of file-name
+// matching; a full-path adaptation that closes it is demonstrated alongside Form C
+// in section [7] (the FullPathAdaptation column), not folded into the recommended
+// query, because the hunt read events carry a file name, not a full path.
+// On this incident all three forms return the same 13, because the attack declared
+// its source up front and then read entirely different files.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// [1] D9 Form C  -  RECOMMENDED rule (unscoped): time-aware file-name
+// matching with reason classification.
+// source_mismatch is the injection-relevant finding. no_preceding_source is a
+// coverage/review candidate, triaged separately, so missing telemetry is never
+// reported as an attack. "declared" reads are not alerted.
+// Expected on hunt data (add the RunId/time filters from [2]): 13 rows, all
+// source_mismatch; 0 no_preceding_source.
+// ---------------------------------------------------------------------
+let Declared = CopilotAudit_CL
+    | where InteractionType == "Prompt"
+    | where isnotempty(trim(@"\s", tostring(DataSourcesAccessed)))
+    | mv-expand Source = split(tostring(DataSourcesAccessed), ";") to typeof(string)
+    | extend Source = trim(@"\s", tostring(Source))
+    | where isnotempty(Source)
+    | extend parts = split(Source, "/")
+    | extend DeclaredName = tolower(tostring(parts[array_length(parts) - 1]))
+    | where isnotempty(DeclaredName)
+    | project TenantId, UserId, SessionId, SrcTime = TimeGenerated, DeclaredName;
+CopilotAudit_CL
+| where ToolName == "Graph.ReadFile"
+| extend ReadName = tolower(tostring(parse_json(ToolParameters).fileName))
+| project TenantId, UserId, SessionId, ReadTime = TimeGenerated, ReadName
+| join kind=leftouter Declared on TenantId, UserId, SessionId
+| summarize NamesBefore = make_set_if(DeclaredName, isnotnull(SrcTime) and SrcTime <= ReadTime)
+    by TenantId, UserId, SessionId, ReadTime, ReadName
+| extend Reason = case(array_length(NamesBefore) == 0, "no_preceding_source",
+                       set_has_element(NamesBefore, ReadName), "declared",
+                       "source_mismatch")
+| where Reason != "declared"
+| project ReadTime, SessionId, ReadName, Reason, NamesBefore
+
+
+// ---------------------------------------------------------------------
+// [2] D9 Form A  -  scoped replay actually run for the report (B-56, K56)
+// Expected: 13 rows, all SessionId cp-emily-20261007-1042.
+// ---------------------------------------------------------------------
+let Declared = CopilotAudit_CL
+    | where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+    | where RunId == "el--17-20260920" and InteractionType == "Prompt"
+    | where isnotempty(trim(@"\s", tostring(DataSourcesAccessed)))
+    | mv-expand Source = split(tostring(DataSourcesAccessed), ";") to typeof(string)
+    | extend Source = trim(@"\s", tostring(Source)) | where isnotempty(Source)
+    | extend parts = split(Source, "/")
+    | extend DeclaredFile = tolower(tostring(parts[array_length(parts) - 1]))
+    | where isnotempty(DeclaredFile)
+    | summarize DeclaredFiles = make_set(DeclaredFile) by TenantId, UserId, SessionId;
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+| where RunId == "el--17-20260920" and ToolName == "Graph.ReadFile"
+| extend ReadFile = tolower(tostring(parse_json(ToolParameters).fileName))
+| join kind=inner Declared on TenantId, UserId, SessionId
+| where not(set_has_element(DeclaredFiles, ReadFile))
+| project TimeGenerated, SessionId, ReadFile, DeclaredFiles
+
+
+// ---------------------------------------------------------------------
+// [3] D9 Form B  -  time-aware, scoped replay (B-63, K63)
+// Expected: 13 rows, every DeclaredBefore = ["q3-2026-global-markets-review.docx"].
+// ---------------------------------------------------------------------
+let win = CopilotAudit_CL
+  | where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+  | where RunId == "el--17-20260920";
+let decls = win
+  | where InteractionType == "Prompt"
+  | where isnotempty(trim(@"\s", tostring(DataSourcesAccessed)))
+  | mv-expand Source = split(tostring(DataSourcesAccessed), ";") to typeof(string)
+  | extend Source = trim(@"\s", tostring(Source)) | where isnotempty(Source)
+  | extend parts = split(Source, "/")
+  | extend DeclaredFile = tolower(tostring(parts[array_length(parts) - 1]))
+  | where isnotempty(DeclaredFile)
+  | project TenantId, UserId, SessionId, SrcTime = TimeGenerated, DeclaredFile;
+win
+| where ToolName == "Graph.ReadFile"
+| extend ReadFile = tolower(tostring(parse_json(ToolParameters).fileName))
+| project TenantId, UserId, SessionId, ReadTime = TimeGenerated, ReadFile
+| join kind=leftouter decls on TenantId, UserId, SessionId
+| summarize DeclaredBefore = make_set_if(DeclaredFile, isnotnull(SrcTime) and SrcTime <= ReadTime)
+    by TenantId, UserId, SessionId, ReadTime, ReadFile
+| where not(set_has_element(DeclaredBefore, ReadFile))
+| project ReadTime, SessionId, ReadFile, DeclaredBefore
+| sort by ReadTime asc
+
+
+// ---------------------------------------------------------------------
+// [4] D2  -  response-level, exact-host allow-list, scoped replay (B-60, K60)
+// Expected: 3 rows (10:43:08, 10:44:19, 10:46:35) carrying 4, 1, 8 URLs to
+// metrics-cdn.analyticshub.io; 0 benign rows.
+// ---------------------------------------------------------------------
+let allowed = dynamic(["cormorantcapital.sharepoint.com"]);
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+| where RunId == "el--17-20260920"
+| where InteractionType == "Response"
+| extend Url = extract_all(@"\((https?://[^)\s]+)\)", CopilotResponse)
+| mv-expand Url to typeof(string)
+| extend Host = tolower(tostring(parse_url(Url).Host))
+| where isnotempty(Host) and Host !in (allowed)
+| summarize Urls = count(), Hosts = make_set(Host) by UserId, SessionId, TimeGenerated
+
+
+// ---------------------------------------------------------------------
+// [5] Coverage, session level (B-61, K61)
+// Expected: Sessions 105, with_prompt 86, without_prompt 19,
+// declared_source 24, with_reads 1, reads_no_source 0.
+// ---------------------------------------------------------------------
+let win = CopilotAudit_CL
+  | where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+  | where RunId == "el--17-20260920";
+let sess_prompt = win
+  | where InteractionType == "Prompt"
+  | extend HasSrc = iff(isnotempty(trim(@"\s", tostring(DataSourcesAccessed))), 1, 0)
+  | summarize PromptCount = count(), SrcPromptCount = sum(HasSrc) by SessionId;
+let sess_reads = win
+  | where ToolName == "Graph.ReadFile"
+  | summarize ReadCount = count() by SessionId;
+win
+| distinct SessionId
+| join kind=leftouter sess_prompt on SessionId
+| join kind=leftouter sess_reads on SessionId
+| extend PromptCount = coalesce(PromptCount,0), SrcPromptCount = coalesce(SrcPromptCount,0), ReadCount = coalesce(ReadCount,0)
+| extend HasPrompt = PromptCount > 0, HasSource = SrcPromptCount > 0, HasReads = ReadCount > 0
+| summarize
+    Sessions                      = count(),
+    Sessions_with_prompt          = countif(HasPrompt),
+    Sessions_without_prompt       = countif(not(HasPrompt)),
+    Sessions_with_declared_source = countif(HasSource),
+    Sessions_with_reads           = countif(HasReads),
+    Sessions_reads_no_source      = countif(HasReads and not(HasSource))
+
+
+// ---------------------------------------------------------------------
+// [6] Coverage, read-event level (B-62, K62)
+// Expected: TotalReads 13, with_preceding_source 13, no_preceding_source 0.
+// ---------------------------------------------------------------------
+let win = CopilotAudit_CL
+  | where TimeGenerated between (datetime(2026-09-20) .. datetime(2026-09-21))
+  | where RunId == "el--17-20260920";
+let src = win
+  | where InteractionType == "Prompt" and isnotempty(trim(@"\s", tostring(DataSourcesAccessed)))
+  | project SessionId, SrcTime = TimeGenerated;
+win
+| where ToolName == "Graph.ReadFile"
+| project SessionId, UserId, ReadTime = TimeGenerated, ReadFile = tostring(parse_json(ToolParameters).fileName)
+| join kind=leftouter src on SessionId
+| summarize HasPrecedingSource = countif(isnotnull(SrcTime) and SrcTime <= ReadTime) > 0
+    by SessionId, UserId, ReadTime, ReadFile
+| summarize
+    TotalReads                  = count(),
+    Reads_with_preceding_source = countif(HasPrecedingSource),
+    Reads_no_preceding_source   = countif(not(HasPrecedingSource))
+
+
+// ---------------------------------------------------------------------
+// [7] SYNTHETIC D9 suite  -  the EXACT Form C (time-aware, file name, reason).
+// Validates Form C's published reason labels. The FullPathAdaptation column
+// runs the documented full-path variant on the same fixtures, which additionally
+// catches the identical-name case (T4). Fixtures only, no hunt data.
+// Expected (TestCase | FormC_reason | FullPathAdaptation_reason):
+//   T1 no source then read               | no_preceding_source | no_preceding_source
+//   T2 declared then that file read       | declared            | declared
+//   T3 read before first source declared  | no_preceding_source | no_preceding_source
+//   T4 same file name, different folder   | declared            | source_mismatch  (name-match limitation)
+//   T5 different file name after a source | source_mismatch     | source_mismatch
+// ---------------------------------------------------------------------
+let Prompts = datatable(TestCase:string, SessionId:string, T:datetime, Src:string)[
+  "T1 no source then read",               "s1", datetime(2026-01-01T00:00:00), "",
+  "T2 declared then that file read",      "s2", datetime(2026-01-01T00:00:00), "/siteA/report.docx",
+  "T3 read before first source declared", "s3", datetime(2026-01-01T00:01:00), "/siteA/secret.docx",
+  "T4 same file name, different folder",  "s4", datetime(2026-01-01T00:00:00), "/siteA/report.docx",
+  "T5 different file name after a source", "s5", datetime(2026-01-01T00:00:00), "/siteA/report.docx"];
+let Reads = datatable(TestCase:string, SessionId:string, T:datetime, ReadPath:string)[
+  "T1 no source then read",               "s1", datetime(2026-01-01T00:00:10), "/siteA/a.docx",
+  "T2 declared then that file read",      "s2", datetime(2026-01-01T00:00:10), "/siteA/report.docx",
+  "T3 read before first source declared", "s3", datetime(2026-01-01T00:00:10), "/siteA/secret.docx",
+  "T4 same file name, different folder",  "s4", datetime(2026-01-01T00:00:10), "/siteB/report.docx",
+  "T5 different file name after a source", "s5", datetime(2026-01-01T00:00:10), "/siteA/other.docx"];
+let decl = Prompts | where isnotempty(trim(@"\s", Src))
+  | extend DeclName = tolower(tostring(split(Src,"/")[array_length(split(Src,"/"))-1])),
+           DeclPath = tolower(Src)
+  | project SessionId, SrcTime = T, DeclName, DeclPath;
+Reads
+| extend ReadName = tolower(tostring(split(ReadPath,"/")[array_length(split(ReadPath,"/"))-1])),
+         ReadPathN = tolower(ReadPath), ReadTime = T
+| join kind=leftouter decl on SessionId
+| summarize NamesBefore = make_set_if(DeclName, isnotnull(SrcTime) and SrcTime <= ReadTime),
+            PathsBefore = make_set_if(DeclPath, isnotnull(SrcTime) and SrcTime <= ReadTime)
+    by TestCase, SessionId, ReadName, ReadPathN
+| extend FormC_reason = case(array_length(NamesBefore) == 0, "no_preceding_source",
+                             set_has_element(NamesBefore, ReadName), "declared",
+                             "source_mismatch"),
+         FullPathAdaptation_reason = case(array_length(PathsBefore) == 0, "no_preceding_source",
+                             set_has_element(PathsBefore, ReadPathN), "declared",
+                             "source_mismatch")
+| project TestCase, FormC_reason, FullPathAdaptation_reason
+| sort by TestCase asc
+
+
+// ---------------------------------------------------------------------
+// [8] SYNTHETIC D2 suite (B-65, K65). Fixtures only.
+// The exact allow-list is compared against a DELIBERATELY SIMPLIFIED
+// suffix-only comparator, not the published D2 (which already uses exact
+// matching). The valid, reproduced weakness is the suffix-only FALSE
+// NEGATIVE on the look-alike host.
+// Expected (TestCase | ExactAllowList_fires | SuffixOnly_fires):
+//   5 approved tenant host            | false | true
+//   6 lookalike ends in approved str  | true  | false
+//   7 external beacon host            | true  | true
+// ---------------------------------------------------------------------
+let Responses = datatable(TestCase:string, Host:string)[
+  "5 approved tenant host",           "cormorantcapital.sharepoint.com",
+  "6 lookalike ends in approved str", "evilcormorantcapital.com",
+  "7 external beacon host",           "metrics-cdn.analyticshub.io"];
+let allowExact = dynamic(["cormorantcapital.sharepoint.com"]);
+Responses
+| extend ExactAllowList_fires = tolower(Host) !in (allowExact),
+         SuffixOnly_fires     = not(tolower(Host) endswith "cormorantcapital.com")
+| project TestCase, Host, ExactAllowList_fires, SuffixOnly_fires
+
+
+// ---------------------------------------------------------------------
+// [9] SYNTHETIC D1 suite (B-66, K66). Fixtures only.
+// Expected: MaxFixedBin 3, FixedBin_fires_at_5 false,
+//           MaxRollingWindow 5, Rolling_fires_at_5 true.
+// ---------------------------------------------------------------------
+let Reads = datatable(T:datetime, FileId:string)[
+  datetime(2026-01-01T10:42:00),"f1", datetime(2026-01-01T10:43:00),"f2",
+  datetime(2026-01-01T10:44:00),"f3", datetime(2026-01-01T10:45:30),"f4",
+  datetime(2026-01-01T10:46:30),"f5", datetime(2026-01-01T10:47:30),"f6"];
+let FixedBin = Reads
+  | summarize DistinctInBin = dcount(FileId) by Bin = bin(T, 5m)
+  | summarize MaxFixedBin = max(DistinctInBin);
+let Rolling = Reads
+  | extend j = 1
+  | join kind=inner (Reads | project Tref = T, j = 1) on j
+  | where T between (Tref - 5m .. Tref)
+  | summarize DistinctInWindow = dcount(FileId) by Tref
+  | summarize MaxRollingWindow = max(DistinctInWindow);
+FixedBin | extend x = 1 | join kind=inner (Rolling | extend x = 1) on x
+| extend FixedBin_fires_at_5 = MaxFixedBin >= 5, Rolling_fires_at_5 = MaxRollingWindow >= 5
+| project MaxFixedBin, FixedBin_fires_at_5, MaxRollingWindow, Rolling_fires_at_5
